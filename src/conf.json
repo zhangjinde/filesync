@@ -1,0 +1,33 @@
+{
+    "log": {
+        "file": "filesync.log",
+        "level": "debug",
+        "cycle": "day",
+        "backup": 7
+    },
+    "server":[
+        {
+            "server":"127.0.0.1",
+            "port":22,
+            "user":"user",
+            "pass":"pass",
+            "cmd":
+            [
+                { "cmd":"", "sleep":1000 },
+                { "cmd":"0", "sleep":200 },
+                { "cmd":"0", "sleep":200 },
+                { "cmd":"1.1.1.1", "sleep":200 },
+                { "cmd":"1", "sleep":200 }
+            ]
+        }
+    ],
+    "monitor":[
+        {
+            "server":"127.0.0.1",
+            "localpath":"D:\\",
+            "remotepath":"/root/",
+            "whitelist":[".*"],
+            "blacklist":[]
+        }
+    ]
+}

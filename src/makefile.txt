@@ -1,0 +1,230 @@
+#------------------------------------------------------------
+# 在用cl.exe编译c或c++文件之前，要先执行vcvars32.bat以设置
+# 编译器的需要的环境变量,主要是PATH,INCLUDE,LIB
+#
+# 如果像以下自己指定路径就不用执行vcvars32.bat
+#
+# 需要的工具: cl.exe        c++编译器
+#             ml.exe        汇编编译器
+#             link.exe      连接器
+#             nmake.exe     生成工具
+#             vcvars32.bat  设置编译器的环境变量
+#             mspdb71.dll   cl.exe的dll
+#------------------------------------------------------------
+
+TARGET_NAME         = filesync
+TARGET_TYPE         = exe       # exe,lib,dll
+BUILD_TYPE          = debug     # debug,release
+DATA_TYPE           = x86       # x86,x64
+MAIN_TYPE           = CONSOLE   # WINDOWS,CONSOLE
+TMP_PATH            = .\tmp     # 临时目录
+SRC_PATH            = .\src     # 源文件目录
+
+# 文件列表
+FILES_SRC           = .\filesync.c \
+                      .\config.c \
+                      .\monitor.c \
+                      .\common\xt_log.c \
+                      .\common\xt_list_stack.c \
+                      .\common\xt_list_with_lock.c \
+                      .\common\xt_memory_pool.c \
+                      .\common\xt_ssh2.c \
+                      .\common\xt_sftp.c \
+                      .\common\xt_zmodem.c \
+                      ..\3th\cjson\cJSON.c
+
+# 文件对象
+FILES_OBJ           = .\tmp\filesync.obj \
+                      .\tmp\config.obj \
+                      .\tmp\monitor.obj \
+                      .\tmp\xt_log.obj \
+                      .\tmp\xt_list_stack.obj \
+                      .\tmp\xt_list_with_lock.obj \
+                      .\tmp\xt_memory_pool.obj \
+                      .\tmp\xt_ssh2.obj \
+                      .\tmp\xt_sftp.obj \
+                      .\tmp\xt_zmodem.obj \
+                      .\tmp\cJSON.obj
+
+# 编译参数
+CFLAGS              = /D "PCRE_STATIC" \
+                      /D "HAVE_STRUCT_TIMESPEC" \
+                      /I "D:\github\filesync\3th" \
+                      /I "D:\github\filesync\3th\ssh2\include" \
+                      /I "D:\github\filesync\3th\pthread" \
+                      /I "D:\github\filesync\src"
+
+# 链接参数
+LFLAGS              = Advapi32.lib GDI32.lib User32.lib /LIBPATH:"..\3th\pcre" pcred.lib \
+                      /LIBPATH:"..\3th\pthread" pthreadVC.lib \
+                      /LIBPATH:"..\3th\ssh2\lib" libeay32d.lib libssh2d.lib ssleay32d.lib \
+                      /NODEFAULTLIB:"MSVCRT" /NODEFAULTLIB:"LIBCMTD"
+
+#------------------------------------------------------------
+# 可执行命令
+
+RC                  = rc.exe
+CC                  = cl.exe
+ML                  = ml.exe
+LNK                 = link.exe
+
+#------------------------------------------------------------
+# 默认路径
+
+PATH_VS             = D:\backup\VC\Tools\MSVC\14.12.25827
+PATH_VS_BIN         = $(PATH_VS)\bin\Hostx64
+PATH_VS_LIB         = $(PATH_VS)\lib
+PATH_VS_INCLUDE     = $(PATH_VS)\include
+
+PATH_KIT            = D:\backup\VC\Kit
+PATH_KIT_LIB1       = $(PATH_KIT)\Lib\10.0.16299.0\um
+PATH_KIT_LIB2       = $(PATH_KIT)\Lib\10.0.16299.0\ucrt
+PATH_KIT_INCLUDE1   = $(PATH_KIT)\Include\10.0.16299.0\um
+PATH_KIT_INCLUDE2   = $(PATH_KIT)\Include\10.0.16299.0\ucrt
+PATH_KIT_INCLUDE3   = $(PATH_KIT)\Include\10.0.16299.0\shared
+
+
+!IF "$(DATA_TYPE)" == "x86"
+
+PATH_VS_BIN         = $(PATH_VS_BIN)\x86
+PATH_VS_LIB         = $(PATH_VS_LIB)\x86
+PATH_KIT_LIB1       = $(PATH_KIT_LIB1)\x86
+PATH_KIT_LIB2       = $(PATH_KIT_LIB2)\x86
+
+!ELSE
+
+PATH_VS_BIN         = $(PATH_VS_BIN)\x64
+PATH_VS_LIB         = $(PATH_VS_LIB)\x64
+PATH_KIT_LIB1       = $(PATH_KIT_LIB1)\x64
+PATH_KIT_LIB2       = $(PATH_KIT_LIB2)\x64
+
+!ENDIF
+
+INCLUDE             = /I "$(PATH_VS_INCLUDE)" /I "$(PATH_KIT_INCLUDE1)" /I "$(PATH_KIT_INCLUDE2)" /I "$(PATH_KIT_INCLUDE3)"
+LIBPATH             = /LIBPATH:"$(PATH_VS_LIB)" /LIBPATH:"$(PATH_KIT_LIB1)" /LIBPATH:"$(PATH_KIT_LIB2)"
+
+#------------------------------------------------------------
+# 编译参数
+
+!IF "$(BUILD_TYPE)" == "debug"
+
+CFLAGS              = $(CFLAGS) /c /W3 /MT /Zi /Od /Gm /EHsc /RTC1 \
+                      $(INCLUDE) /Fo: "$(TMP_PATH)/" /Fd: "$(TMP_PATH)/" \
+                      /D "_MBCS" /D "_DEBUG" /D "WINDOWS"
+
+LFLAGS              = $(LFLAGS) $(LIBPATH)
+
+!ELSE
+
+CFLAGS              = $(CFLAGS) /c /W3 /MT /O2 /GL /FD /EHsc \
+                      $(INCLUDE) /Fo: "$(TMP_PATH)/" /Fd: "$(TMP_PATH)/" \
+                      /D "_MBCS" /D "NDEBUG" /D "WINDOWS"
+
+LFLAGS              = $(LFLAGS) /OPT:REF /OPT:ICF /LTCG  $(LIBPATH)
+
+!ENDIF
+
+!IF "$(DATA_TYPE)" == "x86"
+
+CFLAGS              = $(CFLAGS) /D "WIN32" /D "_WIN32"
+
+!ELSE
+
+CFLAGS              = $(CFLAGS) /D "X64" /D "_WIN64"
+
+!ENDIF
+
+!IF "$(MAIN_TYPE)" == "CONSOLE"
+
+CFLAGS              = $(CFLAGS) /D "_CONSOLE"
+
+!ELSE
+
+CFLAGS              = $(CFLAGS) /D "_WINDOWS"
+
+!ENDIF
+
+#------------------------------------------------------------
+# 连接参数
+
+!IF "$(TARGET_TYPE)" == "exe"
+
+LFLAGS              = $(LFLAGS) /OUT:"$(TMP_PATH)\$(TARGET_NAME).exe" /SUBSYSTEM:CONSOLE
+
+!ELSEIF "$(TARGET_TYPE)" == "lib"
+
+LFLAGS              = $(LFLAGS) /lib /OUT:"$(TMP_PATH)\$(TARGET_NAME).lib"
+
+!ELSEIF "$(TARGET_TYPE)" == "dll"
+
+LFLAGS              = $(LFLAGS) /DLL /OUT:"$(TMP_PATH)\$(TARGET_NAME).dll"
+
+!ENDIF
+
+!IF "$(DATA_TYPE)" == "x86"
+
+LFLAGS              = $(LFLAGS) /MACHINE:X86
+
+!ELSE
+
+LFLAGS              = $(LFLAGS) /MACHINE:X64
+
+!ENDIF
+
+#------------------------------------------------------------
+# 编译依赖
+
+all : TMP OBJ TARGET
+
+TMP :
+    if not exist "$(TMP_PATH)" mkdir $(TMP_PATH)
+
+OBJ : $(FILES_SRC)
+    $(CC) $** $(CFLAGS)
+
+TARGET : $(FILES_OBJ)
+    $(LNK) $** $(LFLAGS)
+
+#------------------------------------------------------------
+#RTLIB_MD            = /MD							 # 多线程DLL
+#RTLIB_MT            = /MT							 # 多线程
+#PARA_UNICODE        = /D "_UNICODE" /D "UNICODE"    # UNICODE字符集
+#PARA_MBCS           = /D "_MBCS"                    # 多字符集
+#PARA_LANGAGE        = /l 0x804                      # 汉语
+#PARA_MFC_DLL        = /D "_AFXDLL"                  # 动态连接到MFC,如果不是动态连接到MFC就此项为空
+#PARA_CREATE_PRECOMP = /Yc"stdafx.h"                 # 生成预编译头
+#PARA_USE_PRECOMP    = /Yu"stdafx.h"                 # 使用预编译头
+#PARA_RC             = /I "$(PATH_MY_OUT)" /I "$(PATH_SYS_INCLUDE)" $(PARA_DEBUG) $(PARA_CHARSET) $(PARA_USE_DLL) $(PARA_LANGAGE) /fo "$(PATH_MY_OUT)/$(PROJECT_NAME).res" ./$(PROJECT_NAME).rc
+#PARA_CL             = /Fp"$(PATH_MY_OUT)\$(PROJECT_NAME).pch" /Fo"$(PATH_MY_OUT)\\" /Fd"$(PATH_MY_OUT)\vc80.pdb" /W3 /c /Wp64 /Zi /TP
+#PARA_LINK           = /LIBPATH:"$(PATH_SYS_LIB)" /OUT:"$(PATH_MY_BIN)\$(PROJECT_NAME).exe" /INCREMENTAL /DEBUG /PDB:"$(PATH_MY_OUT)\$(PROJECT_NAME).pdb" /SUBSYSTEM:WINDOWS $(PARA_LINK) /MACHINE:X86 "$(PATH_MY_OUT)\$(PROJECT_NAME).obj"
+#LINK_PATH           = /LIBPATH:"$(PATH_VS_LIB)" /LIBPATH:"$(PATH_CUR)\Debug"
+#RCFLAGS             = $(INCLUDE) $(PARA_CHARSET) $(PARA_LANGAGE) $(PARA_CREATE_PRECOMP)
+#CFLAGS              = $(INCLUDE) $(PARA_CHARSET) $(PARA_LANGAGE) $(PARA_WIN) $(CL_FALG) $(PARA_USE_DLL)
+#CPPFLAGS            = $(CFLAGS) $(PARA_USE_PRECOMP) PARA_PRECOMP_NAME /Fp"$(PATH_TEMP)\$(PROJECT_NAME).pch" /Fd"$(PATH_TEMP)\vc100.pdb"
+#all:
+#    ml.exe /c /Cx /coff /Fo Debug\ ".\src\eMule\kademlia\MD4_asm.asm"
+#    ml.exe /c /Cx /coff /Fo Debug\ ".\src\Common\test.asm"
+#    ml.exe /c /Cx /coff /Fo Debug\ ".\src\Common\MD5_asm.asm"
+#    rc.exe $(PARA_PATH) /d "_DEBUG" /l 0x804 /I "Debug" /fo"Debug/TestSet.res" .\TestSet.rc
+#    cl.exe $(PARA_PATH) @$(PATH_CUR)\cmd\debug001.txt /nologo
+#    cl.exe $(PARA_PATH) @$(PATH_CUR)\cmd\debug002.txt /nologo
+#    cl.exe $(PARA_PATH) @$(PATH_CUR)\cmd\debug003.txt /nologo
+#    cl.exe $(PARA_PATH) @$(PATH_CUR)\cmd\debug004.txt /nologo
+#    cl.exe $(PARA_PATH) @$(PATH_CUR)\cmd\debug010.txt /nologo
+#    link.exe $(LINK_PATH) @$(PATH_CUR)\cmd\debug012.txt /nologo
+#    @echo -----------------------build over------------------------------
+#
+#clean:
+#    @echo rmdir /s /q Debug
+#    @echo rmdir /s /q Release
+#    @echo -----------------------clean over------------------------------
+#
+#{$(SRC_PATH)}.c{$(TMP_PATH)}.obj::
+#    $(CC) -c $(CFLAGS) /Fo"$(TMP_PATH)\\" $<
+#
+#D:\backup\VC\Tools\MSVC\14.12.25827\bin\Hostx64\x64>cl.exe D:\work\test\main.c /
+#I../../../include /ID:\backup\VC\Kit\Include\10.0.16299.0\ucrt /link ../../../li
+#b/x64/libcmt.lib ../../../lib/x64/oldnames.lib D:\backup\VC\Kit\Lib\10.0.16299.0
+#\um\x64\kernel32.Lib ../../../lib/x64/libvcruntime.lib D:\backup\VC\Kit\Lib\10.0
+#.16299.0\ucrt\x64\libucrt.lib D:\backup\VC\Kit\Lib\10.0.16299.0\um\x64\uuid.lib
+#-----------------------------------------
