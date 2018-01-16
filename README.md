@@ -38,23 +38,34 @@
     ]
 }
 ```
+
 - log 日志配置
-> file 日志文件名
-> level 日志级别
-> cycle 生成周期(mon,day,hour)
-> backup 保存周期
+
+|节点|说明|
+|---|---|
+|file|日志文件名|
+|level|日志级别|
+|cycle|生成周期(mon,day,hour)|
+|backup|保存周期|
 
 - server linux服务器配置
-> server 服务器地址
-> port 端口
-> user 用户名
-> pass 密码
-> cmd 初始命令
-> sleep 命令间隔时间
+
+|节点|说明|
+|---|---|
+|server|服务器地址|
+|port|端口|
+|user|用户名|
+|pass|密码|
+|cmd|初始命令|
+|sleep|命令间隔时间|
 
 - monitor windows监控配置
-> server 对应的linux服务器
-> localpath windows监控目录
-> remotepath linux存储目录
-> whitelist 白名单(正则)
-> blacklist 黑名单(正则)
+
+|节点|说明|
+|---|---|
+|server|对应的linux服务器|
+|localpath|windows监控目录|
+|remotepath|linux存储目录|
+|whitelist|白名单(正则)|
+|blacklist|黑名单(正则)|
+
