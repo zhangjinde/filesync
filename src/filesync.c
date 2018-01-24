@@ -52,6 +52,121 @@ int start_monitor()
     return (i == 0) ? -1 : 0;
 }
 
+void get_info(int num, char *info, int size)
+{
+    double k = num / 1024.0;
+    double m = num / (1024 * 1024.0);
+    double g = num / (1024 * 1024 * 1024.0);
+
+    if (g > 1.0)
+    {
+        sprintf_s(info, size, "%.2f G", g);
+    }
+    else if (m > 1.0)
+    {
+        sprintf_s(info, size, "%.2f M", m);
+    }
+    else if (k > 1.0)
+    {
+        sprintf_s(info, size, "%.2f K", k);
+    }
+    else
+    {
+        sprintf_s(info, size, "%d B", num);
+    }
+}
+
+void process_rz(p_my_ssh_param param, const char *local_filename, const char *remote_filename)
+{
+    char *ptr = strchr(g_buff, '*');
+
+    if (NULL == ptr)
+    {
+        return;
+    }
+
+    strcpy_s(ptr, sizeof(g_buff) - (ptr - g_buff) - 1, "\n");
+    printf(g_buff);
+
+    time_t t1 = time(NULL);
+
+    int len = 0;
+    int ret = file_put(param, local_filename, remote_filename, &len);
+
+    time_t t2 = time(NULL);
+
+    t1 = (t1 == t2) ? 1 : (t2 - t1);
+
+    struct tm t;
+    localtime_s(&t, &t2);
+
+    char info[32];
+    get_info(len, info, sizeof(info) - 1);
+
+    sprintf_s(g_buff, sizeof(g_buff) - 1,
+        "Starting zmodem transfer.Press Ctrl + C to cancel.\n"
+        "Transferring %s\n"
+        "%d-%02d-%02d %02d:%02d:%02d    %s    %d Second    %d Errors\n\n",
+        remote_filename,
+        t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec,
+        info,
+        (int)t1,
+        ret);
+
+    printf(g_buff);
+
+    ssh_recv_data(param, g_buff, sizeof(g_buff) - 1);
+}
+
+void process_sz(p_my_ssh_param param, const char *cmd, const char *local_filename)
+{
+    char *ptr = strchr(g_buff, '*');
+
+    if (NULL == ptr)
+    {
+        return;
+    }
+
+    strcpy_s(ptr, sizeof(g_buff) - (ptr - g_buff) - 1, "");
+
+    if (0 != strncmp(g_buff, cmd, strlen(cmd)) && (ptr = strstr(g_buff, "\r\n")) != NULL)
+    {
+        char *ptr1 = ptr + 3;
+        strcpy_s(ptr, sizeof(g_buff) - (ptr - g_buff) - 1, ptr1);
+    }
+
+    printf(g_buff);
+
+    time_t t1 = time(NULL);
+
+    int len = 0;
+    int ret = file_get(param, local_filename, &len);
+
+    time_t t2 = time(NULL);
+
+    t1 = (t1 == t2) ? 1 : (t2 - t1);
+
+    struct tm t;
+    localtime_s(&t, &t2);
+
+    char info[32];
+    get_info(len, info, sizeof(info) - 1);
+
+    sprintf_s(g_buff, sizeof(g_buff) - 1,
+        "Starting zmodem transfer.Press Ctrl + C to cancel.\n"
+        "Transferring %s\n"
+        "%d-%02d-%02d %02d:%02d:%02d    %s    %d Second    %d Errors\n\n",
+        local_filename,
+        t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec,
+        info,
+        (int)t1,
+        ret);
+
+    printf(g_buff);
+
+    ssh_recv_data(param, g_buff, sizeof(g_buff) - 1);
+}
+
 int send_cmd(p_my_ssh_param param, const char *cmd, int sleep, const char *local_filename, const char *remote_filename)
 {
     pthread_mutex_lock(&g_cs);
@@ -71,80 +186,13 @@ int send_cmd(p_my_ssh_param param, const char *cmd, int sleep, const char *local
 
     ret = ssh_recv_data(param, g_buff, sizeof(g_buff) - 1);
 
-    int t1;
-    int t2;
-    int len = 0;
-
     if (0 == strncmp(cmd, "rz", 2))
     {
-        char *ptr = strchr(g_buff, '*');
-
-        if (NULL != ptr)
-        {
-            strcpy_s(ptr, sizeof(g_buff) - (ptr - g_buff) - 1, "\n");
-            printf(g_buff);
-
-            t1 = (int)time(NULL);
-
-            ret = file_put(param, local_filename, remote_filename, &len);
-
-            t2 = (int)time(NULL);
-
-            t1 = (t1 == t2) ? 1 : (t2 - t1);
-
-            sprintf_s(g_buff, sizeof(g_buff) - 1,
-                "Starting zmodem transfer.Press Ctrl + C to cancel.\n"
-                "Transferring %s\n"
-                "  100%%\t%d B\t%d B/s\t%d Second\t%d Errors\n\n",
-                remote_filename,
-                len,
-                len / t1,
-                t1,
-                ret);
-
-            printf(g_buff);
-
-            ssh_recv_data(param, g_buff, sizeof(g_buff) - 1);
-        }
+        process_rz(param, local_filename, remote_filename);
     }
     else if (0 == strncmp(cmd, "sz", 2))
     {
-        char *ptr = strchr(g_buff, '*');
-
-        if (NULL != ptr)
-        {
-            strcpy_s(ptr, sizeof(g_buff) - (ptr - g_buff) - 1, "");
-
-            if (0 != strncmp(g_buff, cmd, strlen(cmd)) && (ptr = strstr(g_buff, "\r\n")) != NULL)
-            {
-                char *ptr1 = ptr + 3;
-                strcpy_s(ptr, sizeof(g_buff) - (ptr - g_buff) - 1, ptr1);
-            }
-
-            printf(g_buff);
-
-            t1 = (int)time(NULL);
-
-            ret = file_get(param, local_filename, &len);
-
-            t2 = (int)time(NULL);
-
-            t1 = (t1 == t2) ? 1 : (t2 - t1);
-
-            sprintf_s(g_buff, sizeof(g_buff) - 1,
-                "Starting zmodem transfer.Press Ctrl + C to cancel.\n"
-                "Transferring %s\n"
-                "  100%%\t%d B\t%d B/s\t%d Second\t%d Errors\n\n",
-                local_filename,
-                len,
-                len / t1,
-                t1,
-                ret);
-
-            printf(g_buff);
-
-            ssh_recv_data(param, g_buff, sizeof(g_buff) - 1);
-        }
+        process_sz(param, cmd, local_filename);
     }
 
     printf(g_buff);
@@ -175,7 +223,7 @@ int sshCallback(void *param)
 
     while (ssh_param->run)
     {
-        if ((time(NULL) - g_last_time) > 60)
+        if ((time(NULL) - g_last_time) > 150)
         {
             send_cmd(ssh_param, "", 100, NULL, NULL);
         }
